@@ -15,7 +15,8 @@ class ApiError extends BasicApiError
     protected function getLogger($type) {
         if (!isset($this->loggers[$type])) {
             $config = \PhalApi\DI()->config->get('sys.file_logger');
-            $config['file_prefix'] = lcfirst($type);
+            //错误日志都录到app
+            $config['file_prefix'] = 'app';
             $this->loggers[$type] = FileLogger::create($config);
         }
 
