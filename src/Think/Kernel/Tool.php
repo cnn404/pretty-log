@@ -64,7 +64,8 @@ class Tool
         //重写sql日志格式，便于后期在云日志添加慢查询sql监控
         if (strpos($msg, '[ DB ]') === 0) {
             $context['sql'] = $msg;
-            $msg = LogTag::SQL_MONITOR;
+            $context['cost'] = -1;//db连接不做统计
+	    $msg = LogTag::SQL_MONITOR;
         } elseif (strpos($msg, '[ SQL ]') === 0) {
             $costRegex = '/(?<=RunTime:).*(?=s)/';
             $sqlRegex = '/\[.*?\]/';
