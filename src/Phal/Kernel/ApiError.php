@@ -8,27 +8,27 @@
 namespace PrettyLog\Phal\Kernel;
 
 use \PhalApi\Error\ApiError as BasicApiError;
+use PhalApi\Exception;
+use PhalApi\Logger\FileLogger;
 use PrettyLog\LogTag;
+use PrettyLog\Phal\Logger;
 
 class ApiError extends BasicApiError
 {
-    protected function getLogger($type) {
-        if (!isset($this->loggers[$type])) {
-            $config = \PhalApi\DI()->config->get('sys.file_logger');
-            //错误日志都录到app
-            $config['file_prefix'] = 'app';
-            $this->loggers[$type] = FileLogger::create($config);
-        }
-
-        return $this->loggers[$type];
-    }
+    private $ignoreLogger = ['depricated'];
 
     /**
      * 上报错误
      * @param array $context
      */
-    protected function reportError($context) {
-        $message = \PhalApi\T('{error} ({errno}): {errstr} in [File: {errfile}, Line: {errline}, Time: {time}]', $context);
-        $this->getLogger($context['error'])->log($context['error'],LogTag::APP_EXCEPTION, ['error_message'=>$message]);
+    protected function reportError($context)
+    {
+        if (in_array(strtolower($context['error']), $this->ignoreLogger)) {
+            return;
+        }
+        $logger = Logger::getInstance('error');
+        $logger->error(LogTag::APP_EXCEPTION, $context);
+        $logger->writeLogs();
+        $logger->setDefaultChannel();
     }
 }

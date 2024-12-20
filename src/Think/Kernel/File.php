@@ -14,6 +14,10 @@ class File extends BasicFile
 
     private string $channel = 'app';
 
+    private $fileSize = 300000000;//300MB
+//    private $fileSize = 10000;//300MB
+
+
     protected function getMasterLogFile()
     {
         if ($this->config['max_files']) {
@@ -37,11 +41,22 @@ class File extends BasicFile
         }
         return $destination;
     }
+    protected function checkLogSize($destination)
+    {
 
+        if (is_file($destination) && floor($this->fileSize) <= filesize($destination)) {
+            try {
+                $info =  pathinfo($destination);
+                $newDestination = $info['dirname'] . DIRECTORY_SEPARATOR . $info['filename'] . '_' . date('YmdHis') . '.log';
+                rename($destination, $newDestination);
+            } catch (\Exception $e) {
+            }
+        }
+    }
     public function fileName($channel=''): string
     {
         self::defaultChannel($channel);
-        return $channel . '_' . date('Ymd')  . '.log';
+        return $channel  . '.log';
     }
 
     private static function defaultChannel(&$channel = '')

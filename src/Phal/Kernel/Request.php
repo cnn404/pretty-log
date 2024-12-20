@@ -13,14 +13,19 @@ class Request extends \PhalApi\Request
     public function getFullUrl(): string
     {
         // 获取协议（HTTP 或 HTTPS）
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+        if (empty($this->getHeaders())) {
+            return '';
+        }
+        $port = $_SERVER['SERVER_PORT'] ?? '';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $port == 443) ? "https://" : "http://";
 
         // 获取主机名（域名）
-        $host = $_SERVER['HTTP_HOST'];
+        $host = $_SERVER['HTTP_HOST'] ?? '';
 
         // 获取请求的 URI
-        $uri = $_SERVER['REQUEST_URI'];
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
 
+        $uri = urldecode($uri);
         // 拼接完整的 URL
         return $protocol . $host . $uri;
     }
@@ -41,17 +46,17 @@ class Request extends \PhalApi\Request
 
     public function parsePath()
     {
-        return parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        return parse_url($_SERVER['REQUEST_URI']??'', PHP_URL_PATH);
     }
 
     public function parseQuery()
     {
-        return $_SERVER['QUERY_STRING'];
+        return $_SERVER['QUERY_STRING']??'';
     }
 
     public function parseMethod()
     {
-        return $_SERVER['REQUEST_METHOD'];
+        return $_SERVER['REQUEST_METHOD']??'';
     }
 
     public function getHeaders()

@@ -16,4 +16,7 @@ class LogTag
     const SERVICE_RESPONSE = 'service_response';
     //内部异常’500‘错误
     const APP_EXCEPTION = 'app_exception';
+
+    //视图接口输出参数
+    const VIEW_RESPONSE = 'view_response';
 }

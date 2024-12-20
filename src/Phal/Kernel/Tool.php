@@ -21,13 +21,15 @@ class Tool
         return $requestId;
     }
 
-    static public function setRequestId(): string
+    static public function setRequestId($requestId = null): string
     {
-        $requestId = DI()->request->getHeader('X-Request-Id');
-        if (!empty($requestId)) {
-            DI()->set('request_id', $requestId);
+        $requestIdHeader = DI()->request->getHeader('X-Request-Id');
+        if (!empty($requestIdHeader)) {
+            $requestId = $requestIdHeader;
         }
-        $requestId = Uuid::uuid4();
+        if (empty($requestId)) {
+            $requestId = Uuid::uuid4();
+        }
         DI()->set('request_id', $requestId);
         DI()->set('start_time', microtime(true));
         return $requestId;

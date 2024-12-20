@@ -6,6 +6,7 @@ use PrettyLog\AbstractLogger;
 use PrettyLog\LogTag;
 use PrettyLog\Phal\Kernel\FileLogger;
 use PrettyLog\Phal\Kernel\Tool;
+use function PhalApi\DI;
 
 class Logger extends AbstractLogger
 {
@@ -20,6 +21,13 @@ class Logger extends AbstractLogger
             'log_folder' => $logFolder,
             'file_prefix' => $channel
         ]);
+        self::$instance = $this;
+        register_shutdown_function([$this, 'shutdown']);
+    }
+
+    public function shutdown()
+    {
+        $this->writeLogs();
     }
 
     public static function getInstance($chanel = 'app', $logFolder = null): Logger
@@ -28,6 +36,12 @@ class Logger extends AbstractLogger
         !isset(self::$instance) && self::$instance = new self($chanel, $logFolder);
         self::$instance->logger->switchFilePrefix($chanel);
         return self::$instance;
+    }
+
+    public function setDefaultChannel()
+    {
+        $channel = self::defaultChannel();
+        $this->logger->switchFilePrefix($channel);
     }
 
     private static function defaultChannel(&$channel = '')
@@ -39,18 +53,19 @@ class Logger extends AbstractLogger
                 $channel = 'app';
             }
         }
+        return $channel;
     }
 
     public function log($type, $msg, $data)
     {
         $sqlCheckRegex = '/\[.*?SQL\]/';
         //sql日志
-        if (preg_match($sqlCheckRegex, $msg,$m0)) {
+        if (preg_match($sqlCheckRegex, $msg, $m0)) {
             $str = $m0[0];
             $data['sql'] = $msg;
             $costRegex = '/(?<=#\d\s-\s)\d*\.\d*(?=ms)/';
-            if (preg_match($costRegex, $str,$m1)) {
-                $data['cost']= floatval($m1[0]);
+            if (preg_match($costRegex, $str, $m1)) {
+                $data['cost'] = floatval($m1[0]);
             }
             $msg = LogTag::SQL_MONITOR;
         }
@@ -64,23 +79,26 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/17 15:55
      */
-    public static function Sql($data)
+    public static function Sql($data, $once = false)
     {
         return self::getInstance()->info(LogTag::SQL_MONITOR, $data);
     }
 
-    public function info($message, $data = [])
+    public function info($message, $data = [], $once = false)
     {
+        $this->logger->once = $once;
         return $this->logger->info($message, $data);
     }
 
-    public function error($message, $data = [])
+    public function error($message, $data = [], $once = false)
     {
+        $this->logger->once = $once;
         return $this->logger->error($message, $data);
     }
 
-    public function debug($message, $data = [])
+    public function debug($message, $data = [], $once = false)
     {
+        $this->logger->once = $once;
         return $this->logger->debug($message, $data);
     }
 
@@ -93,15 +111,15 @@ class Logger extends AbstractLogger
      */
     public static function AppRequest(array $reqContext = [])
     {
+        if (PHP_SAPI == 'cli') {
+            return false;
+        }
         Tool::setRequestId();
         $request = \PhalApi\DI()->request;
         $data = [
             'method' => $request->parseMethod(),
             'url' => $request->getFullUrl(),
-            'query' => $request->parseQuery(),
             'payload' => $request->parseBody(),
-            'header' => $request->getHeaders(),
-            'client_ip' => $request->getClientIP()
         ];
         $data = array_merge($data, $reqContext);
         return self::getInstance()->info(LogTag::REQUEST, $data);
@@ -114,9 +132,23 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/159:12
      */
-    public static function AppResponse(array $respContext = [])
+    public static function AppResponse(array $respContext = [], bool $isView = false)
     {
-        return self::getInstance()->info(LogTag::RESPONSE, $respContext);
+        $request = \PhalApi\DI()->request;
+        $data = [
+            'method' => $request->parseMethod(),
+            'url' => $request->getFullUrl(),
+            'payload' => $request->parseBody(),
+        ];
+        $respContext['extend'] = $data;
+        $ret = self::getInstance()->info(LogTag::RESPONSE, $respContext);
+        self::getInstance()->writeLogs();
+        return $ret;
+    }
+
+    public function writeLogs()
+    {
+        $this->logger->writeLogs();
     }
 
     /**
@@ -126,9 +158,9 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/159:13
      */
-    public static function ServiceRequest(array $reqContext = [])
+    public static function ServiceRequest(array $reqContext = [], $once = false)
     {
-        return self::getInstance()->info(LogTag::SERVICE_REQUEST, $reqContext);
+        return self::getInstance()->info(LogTag::SERVICE_REQUEST, $reqContext, $once);
     }
 
     /**
@@ -138,8 +170,8 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/159:13
      */
-    public static function ServiceResponse(array $respContext = [])
+    public static function ServiceResponse(array $respContext = [], $once = false)
     {
-        return self::getInstance()->info(LogTag::SERVICE_RESPONSE, $respContext);
+        return self::getInstance()->info(LogTag::SERVICE_RESPONSE, $respContext, $once);
     }
 }

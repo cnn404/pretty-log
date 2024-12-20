@@ -25,8 +25,10 @@ class JsonResponse extends PhalResponse
         if (empty($startTime)) {
             $startTime = microtime(true);
         }
+        $res = $this->getResult();
+        unset($res['request_id']);
         Logger::AppResponse(array_merge(
-            $this->getResult(),
+            $res,
             ['cost' => intval(1000 * (microtime(true) - $startTime))]
         ));
         parent::output();

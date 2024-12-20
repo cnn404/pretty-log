@@ -1,30 +1,28 @@
 <?php
 /*
-* @desc: 日志记录
+* @desc: 业务调用日志类
 * @author： coralme
-* @date: 2024/5/1610:41
+* @date: 2024/7/19 17:43
 */
 
-namespace PrettyLog\Think;
+namespace PrettyLog\Think6;
 
 use PrettyLog\AbstractLogger;
 use PrettyLog\LogTag;
-use PrettyLog\Think\Kernel\Tool;
-use think\Container;
-use think\Exception;
-
+use think\App;
+use PrettyLog\Think6\Kernel\Tool;
 /**
- * @method error(mixed $message, array $data = [], $once = false)  记录error信息
- * @method info(mixed $message, array $data = [], $once = false)  记录info信息
- * @method debug(mixed $message, array $data = [], $once = false)  记录debug信息
+ * @method error(mixed $message, array $data = []) static 记录error信息
+ * @method info(mixed $message, array $data = []) static 记录info信息
+ * @method debug(mixed $message, array $data = []) static 记录debug信息
  */
 class Logger extends AbstractLogger
 {
+
     public function __construct($channel = 'app')
     {
         $this->channel = $channel;
         $this->logger = app('log');
-        self::$instance = $this;
     }
 
     public static function getInstance($channel = 'app'): Logger
@@ -54,20 +52,35 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/159:12
      */
-    public static function AppRequest(array $reqContext = [])
+    public static function AppRequest(array $reqData = [])
     {
+
         if (PHP_SAPI == 'cli') {
             return false;
         }
-        $request = Container::getInstance()->request;
+        
+        $request = App::getInstance()->request;
+
         Tool::setRequestId();
+
+        if (empty($_FILES)) {
+            $payload = json_decode($request->getContent(), true);
+            if (empty($payload)) {
+                $payload = $request->getContent();
+            }
+        } else {
+            $payload = 'file';
+        }
+
         $data = [
             'method' => $request->method(),
             'url' => Tool::getFullUrl(),
-            'payload' => Tool::getPayload(),
+            'query' => $request->query(),
+            'payload' => $payload,
 //            'header' => $request->header(),
         ];
-        $data = array_merge($data, $reqContext);
+
+        $data = array_merge($data, $reqData);
         return self::getInstance()->info(LogTag::REQUEST, $data);
     }
 
@@ -78,23 +91,13 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/159:12
      */
-    public static function AppResponse(array $respContext = [], $isView = false)
+    public static function AppResponse(array $respData = [], $isView = false)
     {
-        $beginTime = Container::get('app')->getBeginTime();
-        $respContext['cost'] = intval(1000 * (microtime(true) - $beginTime));
+        $beginTime = App::getInstance()->getBeginTime();
+        $respData['cost'] = intval(1000 * (microtime(true) - $beginTime));
         $msg = LogTag::RESPONSE;
         $isView && $msg = LogTag::VIEW_RESPONSE;
-        if (isset($respContext['request_id'])) {
-            unset($respContext['request_id']);
-        }
-        $request = Container::getInstance()->request;
-        $data = [
-            'method' => $request->method(),
-            'url' => Tool::getFullUrl(),
-            'payload' => Tool::getPayload(),
-        ];
-        $respContext['extend'] = $data;
-        return self::getInstance()->info($msg, $respContext);
+        return self::getInstance()->info($msg, $respData);
     }
 
     /**
@@ -104,9 +107,9 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/159:13
      */
-    public static function ServiceRequest(array $reqContext = [])
+    public static function ServiceRequest(array $reqData = [])
     {
-        return self::getInstance()->info(LogTag::SERVICE_REQUEST, $reqContext);
+        return self::getInstance()->info(LogTag::SERVICE_REQUEST, $reqData);
     }
 
     /**
@@ -116,9 +119,9 @@ class Logger extends AbstractLogger
      * @author： coralme
      * @date: 2024/5/159:13
      */
-    public static function ServiceResponse(array $respContext = [])
+    public static function ServiceResponse(array $respData = [])
     {
-        return self::getInstance()->info(LogTag::SERVICE_RESPONSE, $respContext);
+        return self::getInstance()->info(LogTag::SERVICE_RESPONSE, $respData);
     }
 
     public function __call($name, $arguments)
@@ -126,13 +129,9 @@ class Logger extends AbstractLogger
         if (in_array($name, ['info', 'error', 'debug'])) {
             $message = $arguments[0];
             $data = $arguments[1] ?? [];
-            $once = $arguments[2] ?? false;
             $func = $name . '_' . $this->channel;
-            if ($once) {
-                $this->logger->write($message, $data);
-            } else {
-                $this->logger->$func($message, $data);
-            }
+            
+            $this->logger->$func($message, $data);
         } else {
             throw new \Exception("$name method not exist.");
         }

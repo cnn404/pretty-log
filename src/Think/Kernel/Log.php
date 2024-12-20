@@ -44,14 +44,15 @@ class Log extends BasicLog implements InterfaceLog
         if (!$this->allowWrite) {
             return $this;
         }
-        if (PHP_SAPI == 'cli') {
-            if (empty($this->config['level']) || in_array($type, $this->config['level'])) {
-                // 命令行日志实时写入
-                $this->write($msg, $type, true);
-            }
-        } else {
-            $this->log[$channel][] = Tool::jsonMessage($msg,$type,$channel,$context);
-        }
+//        if (PHP_SAPI == 'cli') {
+//            if (empty($this->config['level']) || in_array($type, $this->config['level'])) {
+//                // 命令行日志实时写入
+//                $this->write($msg, $type, true);
+//            }
+//        } else {
+//            $this->log[$channel][] = Tool::jsonMessage($msg,$type,$channel,$context);
+//        }
+        $this->log[$channel][] = Tool::jsonMessage($msg,$type,$channel,$context);
 
         return $this;
     }

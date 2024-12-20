@@ -24,12 +24,12 @@ abstract class AbstractLogger implements InterfaceLog
 
     public static abstract function Sql($data);
 
-    public static abstract function AppRequest(array $reqContext = []);
+    public static abstract function AppRequest(array $reqData = []);
 
-    public static abstract function AppResponse(array $respContext = []);
+    public static abstract function AppResponse(array $respData = [], bool $isView = false);
 
-    public static abstract function ServiceRequest(array $reqContext = []);
+    public static abstract function ServiceRequest(array $reqData = []);
 
-    public static abstract function ServiceResponse(array $respContext = []);
+    public static abstract function ServiceResponse(array $respData = []);
 
 }

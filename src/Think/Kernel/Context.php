@@ -15,13 +15,5 @@ use think\Container;
  */
 class Context
 {
-    public function __construct()
-    {
-        $request = Container::getInstance()->request;
-        if (!empty($request->header('X-Request-Id'))) {
-            $this->requestId = $request->header('X-Request-Id');
-        } else {
-            $this->requestId = Uuid::uuid4();
-        }
-    }
+    public $requestId='';
 }
