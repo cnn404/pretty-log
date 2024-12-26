@@ -15,7 +15,7 @@ use PrettyLog\Phal\Logger;
 
 class ApiError extends BasicApiError
 {
-    private $ignoreLogger = ['depricated'];
+    private $ignoreLogger = ['deprecated'];
 
     /**
      * 上报错误
