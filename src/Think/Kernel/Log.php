@@ -13,6 +13,10 @@ use think\Log as BasicLog;
 
 class Log extends BasicLog implements InterfaceLog
 {
+    //批量写日志最大数量
+    const MAX_BATCH_SIZE = 20;
+
+    private $currLogSize = 0;
     public function init($config = []):Log
     {
         $type = isset($config['type']) ? $config['type'] : 'File';
@@ -24,6 +28,7 @@ class Log extends BasicLog implements InterfaceLog
         if (!empty($config['close'])) {
             $this->allowWrite = false;
         }
+        $this->currLogSize = 0;
 
         $this->driver = Loader::factory($type, '\\PrettyLog\\Think\\Kernel\\', $config);
 
@@ -44,16 +49,21 @@ class Log extends BasicLog implements InterfaceLog
         if (!$this->allowWrite) {
             return $this;
         }
-//        if (PHP_SAPI == 'cli') {
+        if (PHP_SAPI == 'cli') {
 //            if (empty($this->config['level']) || in_array($type, $this->config['level'])) {
 //                // 命令行日志实时写入
 //                $this->write($msg, $type, true);
 //            }
-//        } else {
-//            $this->log[$channel][] = Tool::jsonMessage($msg,$type,$channel,$context);
-//        }
-        $this->log[$channel][] = Tool::jsonMessage($msg,$type,$channel,$context);
-
+            $this->write($msg, $type, true, $context);
+        } else {
+            $this->log[$channel][] = Tool::jsonMessage($msg, $type, $channel, $context);
+            $this->currLogSize++;
+            if ($this->currLogSize >= self::MAX_BATCH_SIZE) {
+                $this->driver->save($this->log, false);
+                $this->log = [];
+                $this->currLogSize = 0;
+            }
+        }
         return $this;
     }
 
@@ -65,7 +75,7 @@ class Log extends BasicLog implements InterfaceLog
      * @param  bool   $force 是否强制写入
      * @return bool
      */
-    public function write($msg, $type = 'info', $force = false)
+    public function write($msg, $type = 'info', $force = false,$context = [])
     {
         // 封装日志信息
         if (empty($this->config['level'])) {
@@ -74,7 +84,7 @@ class Log extends BasicLog implements InterfaceLog
 
         if (true === $force || in_array($type, $this->config['level'])) {
 //            $log[$type][] = $msg;
-            $log['app'][] = Tool::jsonMessage($msg, $type, 'app', null);;
+            $log['app'][] = Tool::jsonMessage($msg, $type, 'app', $context);;
         } else {
             return false;
         }

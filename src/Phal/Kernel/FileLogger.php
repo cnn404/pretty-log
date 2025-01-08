@@ -102,7 +102,7 @@ class FileLogger extends BasicFileLogger implements InterfaceLog
         //日志记录为json格式
         $content = json_encode($msgArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $content = $content . PHP_EOL;
-        if (!$this->once) {
+        if (!$this->once && PHP_SAPI != 'cli') {
             $this->currLogSize++;
             $this->logBuffer[$this->filePrefix][] = $content;
             if ($this->currLogSize >= self::MAX_BATCH_SIZE) {

@@ -1,6 +1,6 @@
 {
     "name": "coralme/pretty-log",
-    "version": "2.0.4",
+    "version": "2.0.5",
     "description": "全链路业务日志",
     "type": "library",
     "license": "MIT",
